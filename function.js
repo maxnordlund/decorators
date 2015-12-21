@@ -22,6 +22,35 @@ export const once = use(function once(target) {
 })
 
 /**
+ * Ensures the decorated method is always bound to the expected `this` value.
+ *
+ * That is, it installs an accessor that binds the method on property access.
+ * The net result is that even if you give a function reference to the method,
+ * it will still be bound the instance it came from.
+ */
+export function bind(target, name, descriptor) {
+  if (descriptor && descriptor.hasOwnProperty("value") && typeof descriptor.value !== "function") {
+    throw new TypeError(`${name} is not a function`)
+  } else if (descriptor && (descriptor.hasOwnProperty("get") || descriptor.hasOwnProperty("set"))) {
+    throw new TypeError(`Can not bind accessor: ${name}`)
+  } else if (typeof target === "function" && name == null && descriptor == null) {
+    throw new TypeError(`Can not bind class: ${name}`)
+  }
+
+  const { value } = descriptor
+  delete descriptor.value
+  descriptor.get = function boundGetter() {
+    return this[name] = value.bind(this) // Cache the binding on `this`
+  }
+  descriptor.set = function setter(value) {
+    // Now you see me...
+    Object.defineProperty(this, name, { value })
+    // ...and now you don't
+    return value
+  }
+}
+
+/**
  * Throttles the decorated function.
  *
  * @param {number} [wait=300] time in milliseconds between invokations
